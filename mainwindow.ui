@@ -42,7 +42,7 @@
           <item>
            <widget class="QPushButton" name="saveAsBtn">
             <property name="text">
-             <string>Save</string>
+             <string>Save As</string>
             </property>
            </widget>
           </item>
@@ -60,7 +60,7 @@
           <item>
            <widget class="QPushButton" name="normalBtn">
             <property name="text">
-             <string>Restore</string>
+             <string>Right Normal</string>
             </property>
            </widget>
           </item>
@@ -89,7 +89,7 @@
      <x>0</x>
      <y>0</y>
      <width>957</width>
-     <height>27</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -207,6 +207,15 @@
     <addaction name="separator"/>
     <addaction name="actionMeida_Filter"/>
    </widget>
+   <widget class="QMenu" name="menuTest">
+    <property name="title">
+     <string>Test</string>
+    </property>
+    <addaction name="actionAdjust"/>
+    <addaction name="actionNormal"/>
+    <addaction name="actionZoom_In"/>
+    <addaction name="actionZoom_Out"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuTools"/>
@@ -214,6 +223,7 @@
    <addaction name="menuBlur"/>
    <addaction name="menuGeometric"/>
    <addaction name="menuGrey_Transfrom"/>
+   <addaction name="menuTest"/>
    <addaction name="menuHelp"/>
   </widget>
   <action name="actionOpen">
@@ -457,6 +467,16 @@
   <action name="actionMeida_Filter">
    <property name="text">
     <string>Meida Filter</string>
+   </property>
+  </action>
+  <action name="actionZoom_Out">
+   <property name="text">
+    <string>Zoom Out</string>
+   </property>
+  </action>
+  <action name="actionZoom_In">
+   <property name="text">
+    <string>Zoom In</string>
    </property>
   </action>
  </widget>

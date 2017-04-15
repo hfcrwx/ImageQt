@@ -1,14 +1,12 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-
-
+#include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-
 
     leftScene = new QGraphicsScene;
     rightScene = new QGraphicsScene;
@@ -32,18 +30,14 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->saveAsBtn, SIGNAL(clicked(bool)),
             this, SLOT(on_actionSave_As_triggered()));
 
-
-    connect(ui->normalBtn, SIGNAL(clicked()),
-            this, SLOT(on_actionNormal_triggered()));
-
     connect(ui->hstgrmBtn, SIGNAL(clicked()),
             this, SLOT(on_actionHistogram_triggered()));
-
+    connect(ui->normalBtn, SIGNAL(clicked()),
+            this, SLOT(on_actionNormal_triggered()));
 
     setActionStatus(false);
     setWindowTitle("ImageQt");
     ui->actionEnglish->setEnabled(false);
-
 }
 
 MainWindow::~MainWindow()
@@ -59,7 +53,6 @@ MainWindow::~MainWindow()
     {
         delete image;
         image = NULL;
-
     }
     if (size)
     {
@@ -72,18 +65,88 @@ MainWindow::~MainWindow()
         delete zoom;
         zoom = NULL;
     }
+
+    //add
+    if (rightScene)
+    {
+        delete leftScene;
+        leftScene = NULL;
+    }
+    if (rightImage)
+    {
+        delete image;
+        image = NULL;
+    }
 }
 
 /******************************************************************************
- *                        Exit the program
- *
+ *                Update right image and repaint right scene
  *****************************************************************************/
-void MainWindow::on_actionExit_triggered()
+void MainWindow::updateRightImage(const QImage &image, const QPixmap &pixmap)
 {
-    qApp->quit();
+    rightImage->updateImage(image);
+    rightImage->updatePixmap(pixmap);
+    repaintRightScene(pixmap);
 }
 
+/******************************************************************************
+ *                      Clean image of both Scene
+ *
+ *****************************************************************************/
+void MainWindow::cleanImage()
+{
+    leftScene->clear();
+    ui->leftGraphicsView->resetTransform();
 
+    rightScene->clear();
+    ui->rightGraphicsView->resetTransform();
+
+//    if (leftScene)
+//    {
+//        delete leftScene;
+//        leftScene = new QGraphicsScene;
+//        leftScene->setBackgroundBrush(QColor::fromRgb(224,224,224));
+//        ui->leftGraphicsView->setScene(leftScene);
+//    }
+//    if (rightScene)
+//    {
+//        delete rightScene;
+//        rightScene = new QGraphicsScene;
+//        rightScene->setBackgroundBrush(QColor::fromRgb(224,224,224));
+//        ui->rightGraphicsView->setScene(rightScene);
+//    }
+
+    if (image)
+    {
+        delete image;
+        image = NULL;
+    }
+    if (rightImage)
+    {
+        delete rightImage;
+        rightImage = NULL;
+    }
+
+    //show message?
+    if (size)
+    {
+        delete size;
+        size = new QLabel;
+        ui->statusBar->addPermanentWidget(size);
+    }
+
+    if (zoom)
+    {
+        delete zoom;
+        zoom = new QLabel;
+        ui->statusBar->addWidget(zoom);
+    }
+
+    this->setWindowTitle(WINDOW_TITLE);
+//    ui->leftGraphicsView->resetTransform();
+//    ui->rightGraphicsView->resetTransform();
+    setActionStatus(false);
+}
 
 void MainWindow::setActionStatus(bool status)
 {
@@ -122,58 +185,247 @@ void MainWindow::setActionStatus(bool status)
     ui->actionAdjust_brightness->setEnabled(status);
     ui->actionRight->setEnabled(status);
     ui->zoomAction->setEnabled(status);
+
+//    ui->menuFrame->setEnabled(status);
+}
+
+/******************************************************************************
+ *                            Adjust zoom
+ *
+ *****************************************************************************/
+void MainWindow::adjustZoom()
+{
+    int num = 100*pow(1.2,ui->rightGraphicsView->getFactor());
+    QString percentage = QString::number(num);
+    zoom->setText(percentage + "%");
+}
+
+void MainWindow::receiveBrightnessDelta(int delta)
+{
+    QImage newImage = Tools::Brightness(delta, rightImage->imageObject());
+    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+
+    updateRightImage(newImage, tmpPixmap);
+}
+
+void MainWindow::receiveGaussianFactor(int radius, double sigma)
+{
+    GaussianBlur *blur = new GaussianBlur(radius, sigma);
+
+    // Why a QImage converted from QPixmap?
+    QImage newImage = blur->BlurImage(image->pixmapObject().toImage());
+
+    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+
+    updateRightImage(newImage, tmpPixmap);
+}
+
+/******************************************************************************
+ *                   Receive data from zoom dialog
+ *             and then call the function to done zoom action
+ * ----------------------------------------------------------------------------
+ * This is a private slot function
+ *
+ *****************************************************************************/
+void MainWindow::receiveZoomFactor(int factor)
+{
+    qDebug()<<"zoom factor:"<<factor;
+
+    if (factor != 100)
+    {
+        int cur_width = rightImage->width();
+        int cur_height = rightImage->height();
+
+        QPixmap newPixmap = rightImage->pixmapObject().scaled(cur_width*factor/100, cur_height*factor/100);
+
+        rightImage->updatePixmap(newPixmap);
+        repaintRightScene(newPixmap);
+    }
+    else
+    {
+        return;
+    }
+}
+
+void MainWindow::receiveLinearGreyParameter(double _a, double _b)
+{
+    QImage newImage = Tools::LinearLevelTransformation(image->imageObject(), _a, _b);
+    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+
+    updateRightImage(newImage, tmpPixmap);
+}
+
+void MainWindow::receivePowerGreyParamter(double c, double r, double b)
+{
+    QImage newImage = Tools::PowerGreyLevelTransformation(image->imageObject(), c, r, b);
+    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+
+    updateRightImage(newImage, tmpPixmap);
+}
+
+void MainWindow::receiveLogGreyParamter(double _a, double _b)
+{
+    QImage newImage = Tools::LinearLevelTransformation(image->imageObject(), _a, _b);
+    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+
+    updateRightImage(newImage, tmpPixmap);
+}
+
+void MainWindow::receiveExpGreyParamter(double b, double c, double a)
+{
+    QImage newImage = Tools::ExpTransform(image->imageObject(), b, c, a);
+    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+
+    updateRightImage(newImage, tmpPixmap);
+}
+
+void MainWindow::receiveTwoThresholdParamter(int t1, int t2, int option)
+{
+    QImage newImage = Tools::TwoThreshold(image->imageObject(), t1, t2, option);
+    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+
+    updateRightImage(newImage, tmpPixmap);
+}
+
+void MainWindow::receiveStretchParamter(int x1, int x2,
+                                        double k1, double k2, double k3,
+                                        double b2, double b3)
+{
+    QImage newImage = Tools::StretchTransform(image->imageObject(),x1,x2,k1,k2,k3,b2,b3);
+    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+
+    updateRightImage(newImage, tmpPixmap);
+}
+
+
+
+
+/******************************************************************************
+ *                      Open a image file and show it
+ ******************************************************************************
+ * Args:
+ *      QString imagePath: The abslute path of a image
+ *****************************************************************************/
+void MainWindow::on_actionOpen_triggered()
+{
+        // Automatically detects the current user's home directory
+        // And then wait the user to select one image
+        QString imagePath = QFileDialog::getOpenFileName(this, tr("Open image"), getUserPath() + "/Pictures",
+                                                 tr("All Files (*);;"
+                                                    "All Images (*.bpm *.gif *.jpg *.jpeg *.png *.ppm *.xbm *.xpm);;"
+                                                    "Image BPM (*.bpm);;"
+                                                    "Image GIF (*.gif);;"
+                                                    "Image JPG (*.jpg);;"
+                                                    "Image JPEG (*.jpeg);;"
+                                                    "Image PNG (*.png);;"
+                                                    "Image PPM (*.ppm);;"
+                                                    "Image XBM (*.xbm);;"
+                                                    "Image XPM (*.xpm);;"));
+
+    if (!imagePath.isEmpty())
+    {
+        QFile file(imagePath);
+        if (!file.open(QIODevice::ReadOnly)) {
+            QMessageBox::critical(this, tr(WINDOW_CRITICAL),
+                                  tr("Unable to open image."));
+            return;
+        }
+
+        // delete previous image
+        cleanImage();
+
+        // upload image
+        image = new Image(imagePath);
+        rightImage = new Image(imagePath);
+
+        leftScene->addPixmap(image->pixmapObject());
+        rightScene->addPixmap(rightImage->pixmapObject());
+
+
+        // settings
+        this->setWindowTitle(image->name() + " - ImageQt");
+
+        setActionStatus(true);
+
+        size->setText(QString::number(image->width())
+                      + " x " + QString::number(image->height()));
+
+// very wrong!!!!!!!!!!
+        if (qMax(image->width(),
+                 image->height()) > qMin(ui->leftGraphicsView->width(),
+                                         ui->leftGraphicsView->height()))
+            on_actionAdjust_triggered();
+        else
+            adjustZoom();
+
+    }
 }
 
 /******************************************************************************
  *                      Clean image of both Scene
  *
  *****************************************************************************/
-void MainWindow::cleanImage()
+void MainWindow::on_actionClose_triggered()
 {
-    if (leftScene)
-    {
-        delete leftScene;
-        leftScene = new QGraphicsScene;
-        leftScene->setBackgroundBrush(QColor::fromRgb(224,224,224));
-        ui->leftGraphicsView->setScene(leftScene);
-    }
-    if (rightScene)
-    {
-        delete rightScene;
-        rightScene = new QGraphicsScene;
-        rightScene->setBackgroundBrush(QColor::fromRgb(224,224,224));
-        ui->rightGraphicsView->setScene(rightScene);
-    }
+    cleanImage();
+}
 
-    if (image)
-    {
-        delete image;
-        image = NULL;
-    }
-    if (rightImage)
-    {
-        delete rightImage;
-        rightImage = NULL;
-    }
+void MainWindow::on_actionSave_triggered()
+{
 
-    if (size)
-    {
-        delete size;
-        size = new QLabel;
-        ui->statusBar->addPermanentWidget(size);
-    }
+}
 
-    if (zoom)
-    {
-        delete zoom;
-        zoom = new QLabel;
-        ui->statusBar->addWidget(zoom);
-    }
+/******************************************************************************
+ *                          Action : Save as
+ *****************************************************************************/
+void MainWindow::on_actionSave_As_triggered()
+{
 
-    this->setWindowTitle(WINDOW_TITLE);
-    ui->leftGraphicsView->resetTransform();
-    ui->rightGraphicsView->resetTransform();
-    setActionStatus(false);
+    QString newPath = QFileDialog::getSaveFileName(this, tr("Save image"), QString(),
+            tr("All files (*);;"
+               "Image BPM (*.bpm);;"
+               "Image GIF (*.gif);;"
+               "Image JPG (*.jpg);;"
+               "Image JPEG (*.jpeg);;"
+               "Image PNG (*.png);;"
+               "Image PPM (*.ppm);;"
+               "Image XBM (*.xbm);;"
+               "Image XPM (*.xpm);;"));
+
+    if (!newPath.isEmpty()) {
+
+        QFile file(newPath);
+        if (!file.open(QIODevice::WriteOnly)) {
+            QMessageBox::critical(this, tr(WINDOW_CRITICAL), tr("Unable to save image."));
+            return;
+        }
+
+        //Save image to new path
+        rightImage->save(newPath);
+    }
+}
+
+/******************************************************************************
+ *                        Exit the program
+ *
+ *****************************************************************************/
+void MainWindow::on_actionExit_triggered()
+{
+    qApp->quit();
+}
+
+
+
+
+/******************************************************************************
+ *                              Greyscale
+ *****************************************************************************/
+void MainWindow::on_actionGrayscale_triggered()
+{
+    QImage newImage = Tools::GreyScale(rightImage->imageObject());
+    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+
+    updateRightImage(newImage, tmpPixmap);
 
 }
 
@@ -248,124 +500,6 @@ void MainWindow::on_actionAdjust_triggered()
     adjustZoom();
 }
 
-/******************************************************************************
- *                            Adjust zoom
- *
- *****************************************************************************/
-void MainWindow::adjustZoom()
-{
-    int num = 100*pow(1.2,ui->rightGraphicsView->getFactor());
-    QString percentage = QString::number(num);
-    zoom->setText(percentage + "%");
-}
-
-
-
-
-/******************************************************************************
- *                      Clean image of both Scene
- *
- *****************************************************************************/
-void MainWindow::on_actionClose_triggered()
-{
-    cleanImage();
-}
-
-
-
-
-/******************************************************************************
- *                      Open a image file and show it
- ******************************************************************************
- * Args:
- *      QString imagePath: The abslute path of a image
- *****************************************************************************/
-void MainWindow::on_actionOpen_triggered()
-{
-        // Automatically detects the current user's home directory
-        // And then wait the user to select one image
-        QString imagePath = QFileDialog::getOpenFileName(this, tr("Open image"), getUserPath() + "/Pictures",
-                                                 tr("All Files (*);;"
-                                                    "All Images (*.bpm *.gif *.jpg *.jpeg *.png *.ppm *.xbm *.xpm);;"
-                                                    "Image BPM (*.bpm);;"
-                                                    "Image GIF (*.gif);;"
-                                                    "Image JPG (*.jpg);;"
-                                                    "Image JPEG (*.jpeg);;"
-                                                    "Image PNG (*.png);;"
-                                                    "Image PPM (*.ppm);;"
-                                                    "Image XBM (*.xbm);;"
-                                                    "Image XPM (*.xpm);;"));
-
-    if (!imagePath.isEmpty())
-    {
-        QFile file(imagePath);
-        if (!file.open(QIODevice::ReadOnly)) {
-            QMessageBox::critical(this, tr(WINDOW_CRITICAL),
-                                  tr("Unable to open image."));
-            return;
-        }
-
-        // delete previous image
-        cleanImage();
-
-        // upload image
-        image = new Image(imagePath);
-        rightImage = new Image(imagePath);
-
-        leftScene->addPixmap(image->pixmapObject());
-        rightScene->addPixmap(rightImage->pixmapObject());
-
-
-        // settings
-        this->setWindowTitle(image->name() + " - ImageQt");
-
-        setActionStatus(true);
-
-        size->setText(QString::number(image->width())
-                      + " x " + QString::number(image->height()));
-
-        if (qMax(image->width(),
-                 image->height()) > qMin(ui->leftGraphicsView->width(),
-                                         ui->leftGraphicsView->height()))
-            on_actionAdjust_triggered();
-        else
-            adjustZoom();
-
-    }
-}
-
-
-
-
-/******************************************************************************
- *                          Action : Save as
- *****************************************************************************/
-void MainWindow::on_actionSave_As_triggered()
-{
-
-    QString newPath = QFileDialog::getSaveFileName(this, tr("Save image"), QString(),
-            tr("All files (*);;"
-               "Image BPM (*.bpm);;"
-               "Image GIF (*.gif);;"
-               "Image JPG (*.jpg);;"
-               "Image JPEG (*.jpeg);;"
-               "Image PNG (*.png);;"
-               "Image PPM (*.ppm);;"
-               "Image XBM (*.xbm);;"
-               "Image XPM (*.xpm);;"));
-
-    if (!newPath.isEmpty()) {
-
-        QFile file(newPath);
-        if (!file.open(QIODevice::WriteOnly)) {
-            QMessageBox::critical(this, tr(WINDOW_CRITICAL), tr("Unable to save image."));
-            return;
-        }
-
-        //Save image to new path
-        rightImage->save(newPath);
-    }
-}
 
 
 
@@ -382,349 +516,6 @@ void MainWindow::on_actionRestore_triggered()
 
     adjustZoom();
 }
-
-
-/******************************************************************************
- *                              Rotate Right
- *****************************************************************************/
-void MainWindow::on_actionRight_triggered()
-{
-    ui->rightGraphicsView->rotate(90);
-}
-
-
-
-
-
-/******************************************************************************
- *                              Rotate Left
- *****************************************************************************/
-void MainWindow::on_actionLeft_triggered()
-{
-    ui->rightGraphicsView->rotate(-90);
-}
-
-
-/******************************************************************************
- *                              To do
- *****************************************************************************/
-void MainWindow::on_actionNormal_triggered()
-{
-    repaintRightScene();
-}
-
-
-
-/******************************************************************************
- *                              Dialog: About
- *****************************************************************************/
-void MainWindow::on_actionAbout_triggered()
-{
-    QMessageBox message(QMessageBox::NoIcon, tr(WINDOW_ABOUT), "<h1>ImageQt</h1>"
-                                                               "Powered By Qt 5.7.1.");
-    message.setIconPixmap(QPixmap(":/img/src/logo_1.png"));
-    message.exec();
-}
-
-///******************************************************************************
-// *                              Action: Zoom Out
-// *****************************************************************************/
-//void MainWindow::on_actionZoom_Out_triggered()
-//{
-
-//    int cur_width = rightImage->width();
-//    int cur_height = rightImage->height();
-
-//    QPixmap newPixmap = rightImage->pixmapObject().scaled(cur_width/1.2, cur_height/1.2);
-
-//    rightImage->updatePixmap(newPixmap);
-
-
-//    repaintRightScene(newPixmap);
-//}
-///******************************************************************************
-// *                              Action: Zoom In
-// *****************************************************************************/
-//void MainWindow::on_actionZoom_In_triggered()
-//{
-
-//    int cur_width = rightImage->width();
-//    int cur_height = rightImage->height();
-
-//    QPixmap newPixmap = rightImage->pixmapObject().scaled(cur_width*1.2, cur_height*1.2);
-
-//    rightImage->updatePixmap(newPixmap);
-
-
-//    repaintRightScene(newPixmap);
-
-
-//}
-
-/******************************************************************************
- *                Repaint the right Scene of the MainWindow
- *****************************************************************************/
-void MainWindow::repaintRightScene(QPixmap newPixmap)
-{
-    if (rightScene) {
-        delete rightScene;
-        rightScene = new QGraphicsScene;
-        rightScene->setBackgroundBrush(QColor::fromRgb(224,224,224));
-        ui->rightGraphicsView->setScene(rightScene);
-        ui->rightGraphicsView->resetTransform();
-    }
-    rightScene->addPixmap(newPixmap);
-}
-
-void MainWindow::repaintRightScene()
-{
-    if (rightScene) {
-        delete rightScene;
-        rightScene = new QGraphicsScene;
-        rightScene->setBackgroundBrush(QColor::fromRgb(224,224,224));
-        ui->rightGraphicsView->setScene(rightScene);
-        ui->rightGraphicsView->resetTransform();
-    }
-
-    rightImage->updatePixmap(image->pixmapObject());
-    rightImage->updateImage(image->imageObject());
-    rightScene->addPixmap(rightImage->pixmapObject());
-}
-
-
-
-/******************************************************************************
- *                     on Action tools->zoom triggered
- *****************************************************************************/
-void MainWindow::on_zoomAction_triggered()
-{
-    ZoomDialog *dialog = new ZoomDialog(this);
-    connect(dialog, SIGNAL(sendData(int)), this, SLOT(receiveZoomFactor(int)));
-    dialog->show();
-}
-
-/******************************************************************************
- *                   Receive data from zoom dialog
- *             and then call the function to done zoom action
- * ----------------------------------------------------------------------------
- * This is a private slot function
- *
- *****************************************************************************/
-void MainWindow::receiveZoomFactor(int factor)
-{
-    qDebug()<<"zoom factor:"<<factor;
-    zoomRightImage(factor);
-
-}
-
-/******************************************************************************
- *                       Zoom the right Image
- *****************************************************************************/
-void MainWindow::zoomRightImage(int factor)
-{
-    if (factor != 100)
-    {
-        int cur_width = rightImage->width();
-        int cur_height = rightImage->height();
-
-        QPixmap newPixmap = rightImage->pixmapObject().scaled(cur_width*factor/100, cur_height*factor/100);
-
-        rightImage->updatePixmap(newPixmap);
-
-
-
-
-        repaintRightScene(newPixmap);
-    }
-    else
-    {
-        return;
-    }
-}
-
-/******************************************************************************
- *                       Get the current user name
- *****************************************************************************/
-QString MainWindow::getUserName()
-{
-    QString userPath = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
-    QString userName = userPath.section("/", -1, -1);
-    return userName;
-}
-
-/******************************************************************************
- *                       Get the current user name
- *****************************************************************************/
-QString MainWindow::getUserPath()
-{
-    QString userPath = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
-    return userPath;
-}
-
-
-
-
-
-
-/******************************************************************************
- *                              Greyscale
- *****************************************************************************/
-void MainWindow::on_actionGrayscale_triggered()
-{   
-    QImage newImage = Tools::GreyScale(rightImage->imageObject());
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
-
-    updateRightImage(newImage, tmpPixmap);
-
-}
-
-/******************************************************************************
- *                              Warm
- *****************************************************************************/
-void MainWindow::on_actionWarm_triggered()
-{
-    QImage newImage = Tools::Warm(30, rightImage->imageObject());
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
-
-    updateRightImage(newImage, tmpPixmap);
-}
-
-/******************************************************************************
- *                              Cool
- *****************************************************************************/
-void MainWindow::on_actionCool_triggered()
-{
-    QImage newImage = Tools::Cool(30, rightImage->imageObject());
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
-
-    updateRightImage(newImage, tmpPixmap);
-}
-
-
-/******************************************************************************
- *                              Add frame
- *****************************************************************************/
-void MainWindow::on_actionMovie_frame_triggered()
-{
-    QImage frame = QImage(":/img/src/frame_3.png");
-    QImage newImage = Tools::DrawFrame(rightImage->imageObject(), frame);
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
-
-    updateRightImage(newImage, tmpPixmap);
-}
-
-void MainWindow::on_actionClassic_frame_triggered()
-{
-    QImage frame = QImage(":/img/src/frame_1.png");
-    QImage newImage = Tools::DrawFrame(rightImage->imageObject(), frame);
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
-
-    updateRightImage(newImage, tmpPixmap);
-}
-
-void MainWindow::on_actionFlower_frame_triggered()
-{
-    QImage frame = QImage(":/img/src/frame_2.png");
-    QImage newImage = Tools::DrawFrame(rightImage->imageObject(), frame);
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
-
-    updateRightImage(newImage, tmpPixmap);
-}
-
-
-
-/******************************************************************************
- *                Update right image and repaint right scene
- *****************************************************************************/
-void MainWindow::updateRightImage(QImage &image, QPixmap &pixmap)
-{
-    rightImage->updateImage(image);
-    rightImage->updatePixmap(pixmap);
-    repaintRightScene(pixmap);
-}
-
-
-/******************************************************************************
- *                          Add metal texture
- *****************************************************************************/
-void MainWindow::on_actionMetal_triggered()
-{
-    QImage newImage = Filters::Metal(rightImage->imageObject());
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
-
-    updateRightImage(newImage, tmpPixmap);
-}
-
-/******************************************************************************
- *                          Adjust Brightness
- *****************************************************************************/
-void MainWindow::on_actionAdjust_brightness_triggered()
-{
-    BrightnessDialog dialog;
-    connect(&dialog, SIGNAL(sendData(int)), this, SLOT(receiveBrightnessDelta(int)));
-    dialog.exec();
-}
-
-void MainWindow::receiveBrightnessDelta(int delta)
-{
-    qDebug()<<"adjust brightness, delta: "<<delta;
-    adjustBrightness(delta);
-}
-
-void MainWindow::adjustBrightness(int delta)
-{
-    QImage newImage = Tools::Brightness(delta, rightImage->imageObject());
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
-
-    updateRightImage(newImage, tmpPixmap);
-}
-
-
-/******************************************************************************
- *                          Flip Horizontal
- *****************************************************************************/
-void MainWindow::on_actionHorizontal_triggered()
-{
-    QImage newImage = Tools::Horizontal(rightImage->imageObject());
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
-
-    updateRightImage(newImage, tmpPixmap);
-}
-
-/******************************************************************************
- *                          Flip Vertical
- *****************************************************************************/
-void MainWindow::on_actionVertical_triggered()
-{
-    QImage newImage = Tools::Vertical(rightImage->imageObject());
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
-
-    updateRightImage(newImage, tmpPixmap);
-}
-
-/******************************************************************************
- *                          Language support
- *****************************************************************************/
-void MainWindow::on_actionEnglish_triggered()
-{
-    QTranslator translator;
-    translator.load(":/language/cn.qm");
-    qApp->removeTranslator(&translator);
-    ui->retranslateUi(this);
-    ui->actionEnglish->setEnabled(false);
-    ui->actionChinese->setEnabled(true);
-}
-
-void MainWindow::on_actionChinese_triggered()
-{
-    QTranslator translator;
-    translator.load(":/language/cn.qm");
-    qApp->installTranslator(&translator);
-    ui->retranslateUi(this);
-    ui->actionChinese->setEnabled(false);
-    ui->actionEnglish->setEnabled(true);
-}
-
 
 /******************************************************************************
  *                           绘制图像直方图
@@ -759,124 +550,71 @@ void MainWindow::on_actionHistogram_triggered()
 
 
 
-/******************************************************************************
- *                           灰度线性变换 y = ax + b
- *****************************************************************************/
-void MainWindow::on_actionLinear_level_transformation_triggered()
-{
-    LinearGrayDialog *dialog = new LinearGrayDialog(this);
-    connect(dialog, SIGNAL(sendData(double, double)),
-            this, SLOT(receiveLinearGreyParameter(double,double)));
-    dialog->show();
-}
 
-void MainWindow::receiveLinearGreyParameter(double _a, double _b)
+/******************************************************************************
+ *                              Add frame
+ *****************************************************************************/
+void MainWindow::on_actionMovie_frame_triggered()
 {
-    QImage newImage = Tools::LinearLevelTransformation(image->imageObject(), _a, _b);
+    QImage frame = QImage(":/img/src/frame_3.png");
+    QImage newImage = Tools::DrawFrame(rightImage->imageObject(), frame);
     QPixmap tmpPixmap = QPixmap::fromImage(newImage);
 
     updateRightImage(newImage, tmpPixmap);
 }
 
-
-/******************************************************************************
- *                       灰度对数变换 y = log(b+x)/log(a)
- *****************************************************************************/
-void MainWindow::on_actionLogarithm_grey_level_transformation_triggered()
+void MainWindow::on_actionClassic_frame_triggered()
 {
-    DialogLogGrey *dialog = new DialogLogGrey(this);
-    connect(dialog, SIGNAL(sendData(double, double)),
-            this, SLOT(receiveLogGreyParamter(double,double)));
-    dialog->show();
+    QImage frame = QImage(":/img/src/frame_1.png");
+    QImage newImage = Tools::DrawFrame(rightImage->imageObject(), frame);
+    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+
+    updateRightImage(newImage, tmpPixmap);
 }
 
-void MainWindow::receiveLogGreyParamter(double _a, double _b)
+void MainWindow::on_actionFlower_frame_triggered()
 {
-    QImage newImage = Tools::LinearLevelTransformation(image->imageObject(), _a, _b);
+    QImage frame = QImage(":/img/src/frame_2.png");
+    QImage newImage = Tools::DrawFrame(rightImage->imageObject(), frame);
     QPixmap tmpPixmap = QPixmap::fromImage(newImage);
 
     updateRightImage(newImage, tmpPixmap);
 }
 
 /******************************************************************************
- *                             灰度幂次变换
+ *                          Add metal texture
  *****************************************************************************/
-void MainWindow::on_actionPower_transformation_triggered()
+void MainWindow::on_actionMetal_triggered()
 {
-    DialogPowerGrey *dialog = new DialogPowerGrey(this);
-    connect(dialog, SIGNAL(sendData(double, double, double)),
-            this, SLOT(receivePowerGreyParamter(double,double,double)));
-    dialog->show();
-}
-
-void MainWindow::receivePowerGreyParamter(double c, double r, double b)
-{
-    QImage newImage = Tools::PowerGreyLevelTransformation(image->imageObject(), c, r, b);
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
-
-    updateRightImage(newImage, tmpPixmap);
-}
-
-
-/******************************************************************************
- *                             灰度指数变换
- *****************************************************************************/
-void MainWindow::on_actionExp_transfrom_triggered()
-{
-    DialogExpTransform *dialog = new DialogExpTransform(this);
-    connect(dialog, SIGNAL(sendData(double, double, double)),
-            this, SLOT(receiveExpGreyParamter(double,double,double)));
-    dialog->show();
-}
-
-void MainWindow::receiveExpGreyParamter(double b, double c, double a)
-{
-    QImage newImage = Tools::ExpTransform(image->imageObject(), b, c, a);
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
-
-    updateRightImage(newImage, tmpPixmap);
-}
-
-
-/******************************************************************************
- *                             灰度双阈值变换
- *****************************************************************************/
-void MainWindow::on_actionTwo_thresholds_transform_triggered()
-{
-    DialogThresholdTransform *dialog = new DialogThresholdTransform(this);
-    connect(dialog, SIGNAL(sendData(int, int, int)),
-            this, SLOT(receiveTwoThresholdParamter(int,int,int)));
-    dialog->show();
-}
-
-void MainWindow::receiveTwoThresholdParamter(int t1, int t2, int option)
-{
-    QImage newImage = Tools::TwoThreshold(image->imageObject(), t1, t2, option);
+    QImage newImage = Filters::Metal(rightImage->imageObject());
     QPixmap tmpPixmap = QPixmap::fromImage(newImage);
 
     updateRightImage(newImage, tmpPixmap);
 }
 
 /******************************************************************************
- *                             灰度拉伸变换
+ *                              Cool
  *****************************************************************************/
-void MainWindow::on_actionStretch_transformation_triggered()
+void MainWindow::on_actionCool_triggered()
 {
-    DialogStretchTransform *dialog = new DialogStretchTransform(this);
-    connect(dialog, SIGNAL(sendData(int,int,double,double,double,double,double)),
-            this, SLOT(receiveStretchParamter(int,int,double,double,double,double,double)));
-    dialog->show();
-}
-
-void MainWindow::receiveStretchParamter(int x1, int x2,
-                                        double k1, double k2, double k3,
-                                        double b2, double b3)
-{
-    QImage newImage = Tools::StretchTransform(image->imageObject(),x1,x2,k1,k2,k3,b2,b3);
+    QImage newImage = Tools::Cool(30, rightImage->imageObject());
     QPixmap tmpPixmap = QPixmap::fromImage(newImage);
 
     updateRightImage(newImage, tmpPixmap);
 }
+
+/******************************************************************************
+ *                              Warm
+ *****************************************************************************/
+void MainWindow::on_actionWarm_triggered()
+{
+    QImage newImage = Tools::Warm(30, rightImage->imageObject());
+    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+
+    updateRightImage(newImage, tmpPixmap);
+}
+
+
 
 
 /******************************************************************************
@@ -895,25 +633,12 @@ void MainWindow::on_actionSimple_triggered()
  *****************************************************************************/
 void MainWindow::on_actionGauss_triggered()
 {
-    GaussianBlurDialog *dialog = new GaussianBlurDialog(this);
-    connect(dialog, SIGNAL(sendData(int, double)), this,
+    GaussianBlurDialog dialog;
+    connect(&dialog, SIGNAL(sendData(int, double)), this,
             SLOT(receiveGaussianFactor(int, double)));
 
-    dialog->show();
+    dialog.exec();
 }
-
-void MainWindow::receiveGaussianFactor(int radius, double sigma)
-{
-    GaussianBlur *blur = new GaussianBlur(radius, sigma);
-
-    // Why a QImage converted from QPixmap?
-    QImage newImage = blur->BlurImage(image->pixmapObject().toImage());
-
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
-
-    updateRightImage(newImage, tmpPixmap);
-}
-
 
 /******************************************************************************
  *                              中值滤波
@@ -928,4 +653,244 @@ void MainWindow::on_actionMeida_Filter_triggered()
         QPixmap tmpPixmap = QPixmap::fromImage(newImage);
         updateRightImage(newImage, tmpPixmap);
     }
+}
+
+/******************************************************************************
+ *                              Rotate Left
+ *****************************************************************************/
+void MainWindow::on_actionLeft_triggered()
+{
+    ui->rightGraphicsView->rotate(-90);
+}
+
+/******************************************************************************
+ *                              Rotate Right
+ *****************************************************************************/
+void MainWindow::on_actionRight_triggered()
+{
+    ui->rightGraphicsView->rotate(90);
+}
+
+/******************************************************************************
+ *                     on Action tools->zoom triggered
+ *****************************************************************************/
+void MainWindow::on_zoomAction_triggered()
+{
+    ZoomDialog dialog;
+    connect(&dialog, SIGNAL(sendData(int)), this, SLOT(receiveZoomFactor(int)));
+    dialog.exec();
+}
+
+/******************************************************************************
+ *                          Flip Horizontal
+ *****************************************************************************/
+void MainWindow::on_actionHorizontal_triggered()
+{
+    QImage newImage = Tools::Horizontal(rightImage->imageObject());
+    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+
+    updateRightImage(newImage, tmpPixmap);
+}
+
+/******************************************************************************
+ *                          Flip Vertical
+ *****************************************************************************/
+void MainWindow::on_actionVertical_triggered()
+{
+    QImage newImage = Tools::Vertical(rightImage->imageObject());
+    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+
+    updateRightImage(newImage, tmpPixmap);
+}
+
+
+
+
+/******************************************************************************
+ *                           灰度线性变换 y = ax + b
+ *****************************************************************************/
+void MainWindow::on_actionLinear_level_transformation_triggered()
+{
+    LinearGrayDialog dialog;
+    connect(&dialog, SIGNAL(sendData(double, double)),
+            this, SLOT(receiveLinearGreyParameter(double,double)));
+    dialog.exec();
+}
+
+/******************************************************************************
+ *                             灰度幂次变换
+ *****************************************************************************/
+void MainWindow::on_actionPower_transformation_triggered()
+{
+    DialogPowerGrey dialog;
+    connect(&dialog, SIGNAL(sendData(double, double, double)),
+            this, SLOT(receivePowerGreyParamter(double,double,double)));
+    dialog.exec();
+}
+
+/******************************************************************************
+ *                       灰度对数变换 y = log(b+x)/log(a)
+ *****************************************************************************/
+void MainWindow::on_actionLogarithm_grey_level_transformation_triggered()
+{
+    DialogLogGrey dialog;
+    connect(&dialog, SIGNAL(sendData(double, double)),
+            this, SLOT(receiveLogGreyParamter(double,double)));
+    dialog.exec();
+}
+
+/******************************************************************************
+ *                             灰度指数变换
+ *****************************************************************************/
+void MainWindow::on_actionExp_transfrom_triggered()
+{
+    DialogExpTransform dialog;
+    connect(&dialog, SIGNAL(sendData(double, double, double)),
+            this, SLOT(receiveExpGreyParamter(double,double,double)));
+    dialog.exec();
+}
+
+/******************************************************************************
+ *                             灰度双阈值变换
+ *****************************************************************************/
+void MainWindow::on_actionTwo_thresholds_transform_triggered()
+{
+    DialogThresholdTransform dialog;
+    connect(&dialog, SIGNAL(sendData(int, int, int)),
+            this, SLOT(receiveTwoThresholdParamter(int,int,int)));
+    dialog.exec();
+}
+
+/******************************************************************************
+ *                             灰度拉伸变换
+ *****************************************************************************/
+void MainWindow::on_actionStretch_transformation_triggered()
+{
+    DialogStretchTransform dialog;
+    connect(&dialog, SIGNAL(sendData(int,int,double,double,double,double,double)),
+            this, SLOT(receiveStretchParamter(int,int,double,double,double,double,double)));
+    dialog.exec();
+}
+
+
+
+
+/******************************************************************************
+ *                          Adjust Brightness
+ *****************************************************************************/
+void MainWindow::on_actionAdjust_brightness_triggered()
+{
+    BrightnessDialog dialog;
+    connect(&dialog, SIGNAL(sendData(int)), this, SLOT(receiveBrightnessDelta(int)));
+    dialog.exec();
+}
+
+/******************************************************************************
+ *                              To do
+ *****************************************************************************/
+void MainWindow::on_actionNormal_triggered()
+{
+    updateRightImage(image->imageObject(), image->pixmapObject());
+}
+
+/******************************************************************************
+ *                              Action: Zoom In
+ *****************************************************************************/
+void MainWindow::on_actionZoom_In_triggered()
+{
+    int cur_width = rightImage->width();
+    int cur_height = rightImage->height();
+
+    QPixmap newPixmap = rightImage->pixmapObject().scaled(cur_width*1.2, cur_height*1.2);
+
+    rightImage->updatePixmap(newPixmap);
+    repaintRightScene(newPixmap);
+}
+
+///******************************************************************************
+// *                              Action: Zoom Out
+// *****************************************************************************/
+void MainWindow::on_actionZoom_Out_triggered()
+{
+    int cur_width = rightImage->width();
+    int cur_height = rightImage->height();
+
+    QPixmap newPixmap = rightImage->pixmapObject().scaled(cur_width/1.2, cur_height/1.2);
+
+    rightImage->updatePixmap(newPixmap);
+    repaintRightScene(newPixmap);
+}
+
+/******************************************************************************
+ *                              Dialog: About
+ *****************************************************************************/
+void MainWindow::on_actionAbout_triggered()
+{
+    QMessageBox message(QMessageBox::NoIcon, tr(WINDOW_ABOUT), "<h1>ImageQt</h1>"
+                                                               "Powered By Qt 5.7.1.");
+    message.setIconPixmap(QPixmap(":/img/src/logo_1.png"));
+    message.exec();
+}
+
+/******************************************************************************
+ *                          Language support
+ *****************************************************************************/
+
+void MainWindow::on_actionChinese_triggered()
+{
+    QTranslator translator;
+    translator.load(":/language/cn.qm");
+    qApp->installTranslator(&translator);
+    ui->retranslateUi(this);
+    ui->actionChinese->setEnabled(false);
+    ui->actionEnglish->setEnabled(true);
+}
+
+void MainWindow::on_actionEnglish_triggered()
+{
+    QTranslator translator;
+    translator.load(":/language/cn.qm");
+    qApp->removeTranslator(&translator);
+    ui->retranslateUi(this);
+    ui->actionEnglish->setEnabled(false);
+    ui->actionChinese->setEnabled(true);
+}
+
+/******************************************************************************
+ *                Repaint the right Scene of the MainWindow
+ *****************************************************************************/
+void MainWindow::repaintRightScene(QPixmap newPixmap)
+{
+ //   rightScene->clear();
+//    ui->rightGraphicsView->setScene(rightScene);
+//    ui->rightGraphicsView->resetTransform();
+
+    if (rightScene) {
+        delete rightScene;
+        rightScene = new QGraphicsScene;
+        rightScene->setBackgroundBrush(QColor::fromRgb(224,224,224));
+        ui->rightGraphicsView->setScene(rightScene);
+        ui->rightGraphicsView->resetTransform();
+    }
+    rightScene->addPixmap(newPixmap);
+    qDebug() << "repaintRightScene"  << rightScene->items().count();
+}
+
+/******************************************************************************
+ *                       Get the current user name
+ *****************************************************************************/
+QString MainWindow::getUserName()
+{
+    QString userPath = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+    QString userName = userPath.section("/", -1, -1);
+    return userName;
+}
+
+/******************************************************************************
+ *                       Get the current user name
+ *****************************************************************************/
+QString MainWindow::getUserPath()
+{
+    QString userPath = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+    return userPath;
 }

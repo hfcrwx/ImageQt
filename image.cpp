@@ -1,33 +1,20 @@
 #include "image.h"
-
+#include <QDebug>
 
 Image::Image(QString path)
 {
     pixmap.load(path);
     img.load(path);
-    QFile file(path);
-    info = new QFileInfo(file.fileName());
+    info = new QFileInfo(path);
+    qDebug() << sizeof img << sizeof pixmap  << sizeof pixmap.data_ptr();
 }
-
 
 Image::~Image()
 {
-
     if (info)
     {
         delete info;
         info = NULL;
-    }
-}
-
-void Image::load(QString path)
-{
-    pixmap.load(path);
-    QFile file(path);
-    if (info)
-    {
-        delete info;
-        info = new QFileInfo(file.fileName());
     }
 }
 
@@ -47,30 +34,9 @@ QImage Image::imageObject()
     return img;
 }
 
-QString Image::path()
-{
-    return info->absoluteFilePath();
-
-}
-
 QString Image::name()
 {
     return info->fileName();
-}
-
-QString Image::baseName()
-{
-    return info->baseName();
-}
-
-QString Image::extension()
-{
-    return "." + info->suffix();
-}
-
-QString Image::directory()
-{
-    return info->path() + "/";
 }
 
 int Image::width()
@@ -83,10 +49,8 @@ int Image::height()
     return pixmap.height();
 }
 
-
 void Image::updatePixmap(QPixmap newPixmap)
 {
-
     pixmap = newPixmap;
 }
 

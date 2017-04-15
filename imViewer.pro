@@ -34,14 +34,14 @@ SOURCES += main.cpp\
     dialog_zoom.cpp \
     histogram.cpp \
     dialog_linear_gray.cpp \
-    qcustomplot.cpp \
     dialog_log_grey.cpp \
     dialog_power_grey.cpp \
     dialog_exp_transform.cpp \
     dialog_two_threshold_transform.cpp \
     dialog_stretch_transform.cpp \
     gaussianblur.cpp \
-    medianfilter.cpp
+    medianfilter.cpp \
+    qcustomplot.cpp
 
 HEADERS  += mainwindow.h \
     image.h \
@@ -53,7 +53,6 @@ HEADERS  += mainwindow.h \
     dialog_zoom.h \
     histogram.h \
     dialog_linear_gray.h \
-    qcustomplot.h \
     dialog_log_grey.h \
     dialog_power_grey.h \
     dialog_exp_transform.h \
@@ -61,7 +60,8 @@ HEADERS  += mainwindow.h \
     dialog_stretch_transform.h \
     gaussianblur.h \
     medianfilter.h \
-    common.h
+    common.h \
+    qcustomplot.h
 
 FORMS    += mainwindow.ui \
     zoomdialog.ui \

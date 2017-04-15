@@ -2,7 +2,6 @@
 #define IMAGE_H
 
 #include <QPixmap>
-#include <QFile>
 #include <QFileInfo>
 #include <QImage>
 
@@ -17,7 +16,6 @@ public:
     Image(QString path);
     ~Image();
 
-    void load(QString path);
     void save(QString path);
 
     void updatePixmap(QPixmap newPixmap);
@@ -25,11 +23,8 @@ public:
 
     QPixmap pixmapObject();
     QImage imageObject();
-    QString path();         // /home/ttj/Pictures/logo.png
+
     QString name();         // logo.png
-    QString baseName();     //logo
-    QString extension();    //.png
-    QString directory();    // /home/ttj/Pictures
 
     int width();
     int height();
