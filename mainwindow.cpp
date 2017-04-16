@@ -86,7 +86,6 @@ MainWindow::~MainWindow()
  *****************************************************************************/
 void MainWindow::updateRightImage(const QPixmap &pixmap)
 {
-//    rightImage->updateImage(image);
     rightImage->updatePixmap(pixmap);
     repaintRightScene(pixmap);
 }
@@ -241,8 +240,7 @@ void MainWindow::receiveZoomFactor(int factor)
 
         QPixmap newPixmap = rightImage->pixmapObject().scaled(cur_width*factor/100, cur_height*factor/100);
 
-        rightImage->updatePixmap(newPixmap);
-        repaintRightScene(newPixmap);
+        updateRightImage(newPixmap);
     }
     else
     {
@@ -807,8 +805,7 @@ void MainWindow::on_actionZoom_In_triggered()
 
     QPixmap newPixmap = rightImage->pixmapObject().scaled(cur_width*1.2, cur_height*1.2);
 
-    rightImage->updatePixmap(newPixmap);
-    repaintRightScene(newPixmap);
+    updateRightImage(newPixmap);
 }
 
 ///******************************************************************************
@@ -822,7 +819,7 @@ void MainWindow::on_actionZoom_Out_triggered()
     QPixmap newPixmap = rightImage->pixmapObject().scaled(cur_width/1.2, cur_height/1.2);
 
     rightImage->updatePixmap(newPixmap);
-    repaintRightScene(newPixmap);
+    updateRightImage(newPixmap);
 }
 
 /******************************************************************************

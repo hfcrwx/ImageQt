@@ -121,6 +121,9 @@ private:
     QGraphicsScene  *rightScene;
     Image           *image;               // The original image
     Image           *rightImage;          // The image to show in right Scene
+//    QPixmap image;
+//    QPixmap rightImage;
+
     QLabel          *size;
     QLabel          *zoom;
 
