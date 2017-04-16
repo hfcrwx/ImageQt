@@ -126,6 +126,10 @@ private:
     QLabel          *zoom;
     QFileInfo *info;
 
+    QGraphicsPixmapItem* leftPixmapItem;
+    QGraphicsPixmapItem* rightPixmapItem;
+
+
     QString getUserName();
     QString getUserPath();
 };
