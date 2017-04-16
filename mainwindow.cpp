@@ -12,8 +12,8 @@ MainWindow::MainWindow(QWidget *parent) :
     leftScene = new QGraphicsScene;
     rightScene = new QGraphicsScene;
 
-    image = NULL;
-    rightImage = NULL;
+//    image = NULL;
+//    rightImage = NULL;
 
     size = new QLabel;
     zoom = new QLabel;
@@ -54,11 +54,11 @@ MainWindow::~MainWindow()
         delete leftScene;
         leftScene = NULL;
     }
-    if (image)
-    {
-        delete image;
-        image = NULL;
-    }
+//    if (image)
+//    {
+//        delete image;
+//        image = NULL;
+//    }
     if (size)
     {
         delete size;
@@ -77,11 +77,11 @@ MainWindow::~MainWindow()
         delete leftScene;
         leftScene = NULL;
     }
-    if (rightImage)
-    {
-        delete image;
-        image = NULL;
-    }
+//    if (rightImage)
+//    {
+//        delete image;
+//        image = NULL;
+//    }
 }
 
 /******************************************************************************
@@ -135,16 +135,16 @@ void MainWindow::cleanImage()
 //        ui->rightGraphicsView->setScene(rightScene);
 //    }
 
-    if (image)
-    {
-        delete image;
-        image = NULL;
-    }
-    if (rightImage)
-    {
-        delete rightImage;
-        rightImage = NULL;
-    }
+//    if (image)
+//    {
+//        delete image;
+//        image = NULL;
+//    }
+//    if (rightImage)
+//    {
+//        delete rightImage;
+//        rightImage = NULL;
+//    }
 
     //show message?
     if (size)
@@ -366,8 +366,8 @@ void MainWindow::on_actionOpen_triggered()
         // upload image
         info = new QFileInfo(imagePath);
 
-        image = new QPixmap(imagePath);
-        rightImage = new QPixmap(imagePath);
+//        image = new QPixmap(imagePath);
+//        rightImage = new QPixmap(imagePath);
 
 //        leftScene->addPixmap(*image);
 //        rightScene->addPixmap(*rightImage);
@@ -394,8 +394,8 @@ void MainWindow::on_actionOpen_triggered()
 
         setActionStatus(true);
 
-        size->setText(QString::number(image->width())
-                      + " x " + QString::number(image->height()));
+        size->setText(QString::number(leftPixmapItem->pixmap().width())
+                      + " x " + QString::number(leftPixmapItem->pixmap().height()));
 
 //// very wrong!!!!!!!!!!
 //        if (qMax(image->width(),
@@ -448,7 +448,8 @@ void MainWindow::on_actionSave_As_triggered()
         }
 
         //Save image to new path
-        rightImage->save(newPath);
+        rightPixmapItem->pixmap().save(newPath);
+//        rightImage->save(newPath);
     }
 }
 
@@ -485,8 +486,8 @@ void MainWindow::on_actionGrayscale_triggered()
 void MainWindow::on_actionAdjust_triggered()
 {
     // left
-    int height = image->height();
-    int width = image->width();
+    int height = leftPixmapItem->pixmap().height();
+    int width = leftPixmapItem->pixmap().width();
     int max_height = ui->leftGraphicsView->height();
     int max_width = ui->leftGraphicsView->width();
     int size,max_size,fact=0;
@@ -516,8 +517,8 @@ void MainWindow::on_actionAdjust_triggered()
 
 
     // right
-    height = rightImage->height();
-    width = rightImage->width();
+    height = leftPixmapItem->pixmap().height();
+    width = leftPixmapItem->pixmap().width();
     max_height = ui->rightGraphicsView->height();
     max_width = ui->rightGraphicsView->width();
     size = max_size = fact = 0;
@@ -575,7 +576,7 @@ void MainWindow::on_actionHistogram_triggered()
     QDialog * hstgrmDialog = new QDialog(this);
     QScrollArea * scrollArea = new QScrollArea(hstgrmDialog);
     Histogram * hstgrm = new Histogram(scrollArea);
-    hstgrm->computeHstgrm(rightImage->toImage());
+    hstgrm->computeHstgrm(rightPixmapItem->pixmap().toImage());
 
     if (hstgrm == NULL)
         return;
@@ -938,9 +939,9 @@ QString MainWindow::getUserPath()
 void MainWindow::on_actionT_triggered()
 {
     QLabel* l = new QLabel;
-    if (rightImage) {
+    if (!rightPixmapItem->pixmap().isNull()) {
         qDebug() << "hello";
-        l->setPixmap(*rightImage);
+        l->setPixmap(rightPixmapItem->pixmap());
         l->show();
     }
 }

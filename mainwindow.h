@@ -120,15 +120,12 @@ private:
     Ui::MainWindow  *ui;
     QGraphicsScene  *leftScene;
     QGraphicsScene  *rightScene;
-    QPixmap* image;
-    QPixmap* rightImage;
-    QLabel          *size;
-    QLabel          *zoom;
-    QFileInfo *info;
-
     QGraphicsPixmapItem* leftPixmapItem;
     QGraphicsPixmapItem* rightPixmapItem;
 
+    QLabel          *size;
+    QLabel          *zoom;
+    QFileInfo *info;
 
     QString getUserName();
     QString getUserPath();
