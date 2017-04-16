@@ -49,7 +49,7 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
-    void updateRightImage(const QImage &image, const QPixmap &pixmap);
+    void updateRightImage(const QPixmap &pixmap);
     void cleanImage();
 
     void setActionStatus(bool);
@@ -123,6 +123,8 @@ private:
     Image           *rightImage;          // The image to show in right Scene
     QLabel          *size;
     QLabel          *zoom;
+
+    QFileInfo *info;
 
     void repaintRightScene(QPixmap);
     QString getUserName();

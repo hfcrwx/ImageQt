@@ -4,18 +4,10 @@
 Image::Image(QString path)
 {
     pixmap.load(path);
-    img.load(path);
-    info = new QFileInfo(path);
-    qDebug() << sizeof img << sizeof pixmap  << sizeof pixmap.data_ptr();
 }
 
 Image::~Image()
 {
-    if (info)
-    {
-        delete info;
-        info = NULL;
-    }
 }
 
 void Image::save(QString path)
@@ -27,16 +19,6 @@ void Image::save(QString path)
 QPixmap Image::pixmapObject()
 {
     return pixmap;
-}
-
-QImage Image::imageObject()
-{
-    return img;
-}
-
-QString Image::name()
-{
-    return info->fileName();
 }
 
 int Image::width()
@@ -52,9 +34,4 @@ int Image::height()
 void Image::updatePixmap(QPixmap newPixmap)
 {
     pixmap = newPixmap;
-}
-
-void Image::updateImage(const QImage &image)
-{
-    img = image;
 }

@@ -8,9 +8,7 @@
 class Image
 {
 private:
-    QImage img;
     QPixmap pixmap;
-    QFileInfo *info;
 
 public:
     Image(QString path);
@@ -19,12 +17,9 @@ public:
     void save(QString path);
 
     void updatePixmap(QPixmap newPixmap);
-    void updateImage(const QImage &image);
 
     QPixmap pixmapObject();
-    QImage imageObject();
 
-    QString name();         // logo.png
 
     int width();
     int height();
