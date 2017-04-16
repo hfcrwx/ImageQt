@@ -84,10 +84,21 @@ MainWindow::~MainWindow()
 /******************************************************************************
  *                Update right image and repaint right scene
  *****************************************************************************/
-void MainWindow::updateRightImage(const QPixmap &pixmap)
+void MainWindow::updateRightImage(QPixmap &pixmap)
 {
-    rightImage->updatePixmap(pixmap);
-    repaintRightScene(pixmap);
+    //   rightScene->clear();
+   //    ui->rightGraphicsView->setScene(rightScene);
+   //    ui->rightGraphicsView->resetTransform();
+
+       if (rightScene) {
+           delete rightScene;
+           rightScene = new QGraphicsScene;
+           rightScene->setBackgroundBrush(QColor::fromRgb(224,224,224));
+           ui->rightGraphicsView->setScene(rightScene);
+           ui->rightGraphicsView->resetTransform();
+       }
+       rightScene->addPixmap(pixmap);
+       qDebug() << "repaintRightScene"  << rightScene->items().count();
 }
 
 /******************************************************************************
@@ -204,10 +215,10 @@ void MainWindow::adjustZoom()
 void MainWindow::receiveBrightnessDelta(int delta)
 {
 //    QImage newImage = Tools::Brightness(delta, rightImage->imageObject());
-    QImage newImage = Tools::Brightness(delta, rightImage->pixmapObject().toImage());
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+    QImage newImage = Tools::Brightness(delta, rightImage->toImage());
+    rightImage->convertFromImage(newImage);
 
-    updateRightImage(tmpPixmap);
+    updateRightImage(*rightImage);
 }
 
 void MainWindow::receiveGaussianFactor(int radius, double sigma)
@@ -215,11 +226,11 @@ void MainWindow::receiveGaussianFactor(int radius, double sigma)
     GaussianBlur *blur = new GaussianBlur(radius, sigma);
 
     // Why a QImage converted from QPixmap?
-    QImage newImage = blur->BlurImage(rightImage->pixmapObject().toImage());
+    QImage newImage = blur->BlurImage(rightImage->toImage());
 
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+    rightImage->convertFromImage(newImage);
 
-    updateRightImage(tmpPixmap);
+    updateRightImage(*rightImage);
 }
 
 /******************************************************************************
@@ -238,7 +249,7 @@ void MainWindow::receiveZoomFactor(int factor)
         int cur_width = rightImage->width();
         int cur_height = rightImage->height();
 
-        QPixmap newPixmap = rightImage->pixmapObject().scaled(cur_width*factor/100, cur_height*factor/100);
+        QPixmap newPixmap = rightImage->scaled(cur_width*factor/100, cur_height*factor/100);
 
         updateRightImage(newPixmap);
     }
@@ -250,52 +261,52 @@ void MainWindow::receiveZoomFactor(int factor)
 
 void MainWindow::receiveLinearGreyParameter(double _a, double _b)
 {
-    QImage newImage = Tools::LinearLevelTransformation(image->pixmapObject().toImage(), _a, _b);
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+    QImage newImage = Tools::LinearLevelTransformation(rightImage->toImage(), _a, _b);
+    rightImage->convertFromImage(newImage);
 
-    updateRightImage(tmpPixmap);
+    updateRightImage(*rightImage);
 }
 
 void MainWindow::receivePowerGreyParamter(double c, double r, double b)
 {
-    QImage newImage = Tools::PowerGreyLevelTransformation(image->pixmapObject().toImage(), c, r, b);
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+    QImage newImage = Tools::PowerGreyLevelTransformation(rightImage->toImage(), c, r, b);
+    rightImage->convertFromImage(newImage);
 
-    updateRightImage(tmpPixmap);
+    updateRightImage(*rightImage);
 }
 
 void MainWindow::receiveLogGreyParamter(double _a, double _b)
 {
-    QImage newImage = Tools::LinearLevelTransformation(image->pixmapObject().toImage(), _a, _b);
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+    QImage newImage = Tools::LinearLevelTransformation(rightImage->toImage(), _a, _b);
+    rightImage->convertFromImage(newImage);
 
-    updateRightImage(tmpPixmap);
+    updateRightImage(*rightImage);
 }
 
 void MainWindow::receiveExpGreyParamter(double b, double c, double a)
 {
-    QImage newImage = Tools::ExpTransform(image->pixmapObject().toImage(), b, c, a);
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+    QImage newImage = Tools::ExpTransform(rightImage->toImage(), b, c, a);
+    rightImage->convertFromImage(newImage);
 
-    updateRightImage(tmpPixmap);
+    updateRightImage(*rightImage);
 }
 
 void MainWindow::receiveTwoThresholdParamter(int t1, int t2, int option)
 {
-    QImage newImage = Tools::TwoThreshold(image->pixmapObject().toImage(), t1, t2, option);
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+    QImage newImage = Tools::TwoThreshold(rightImage->toImage(), t1, t2, option);
+    rightImage->convertFromImage(newImage);
 
-    updateRightImage(tmpPixmap);
+    updateRightImage(*rightImage);
 }
 
 void MainWindow::receiveStretchParamter(int x1, int x2,
                                         double k1, double k2, double k3,
                                         double b2, double b3)
 {
-    QImage newImage = Tools::StretchTransform(image->pixmapObject().toImage(),x1,x2,k1,k2,k3,b2,b3);
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+    QImage newImage = Tools::StretchTransform(rightImage->toImage(),x1,x2,k1,k2,k3,b2,b3);
+    rightImage->convertFromImage(newImage);
 
-    updateRightImage(tmpPixmap);
+    updateRightImage(*rightImage);
 }
 
 
@@ -337,11 +348,12 @@ void MainWindow::on_actionOpen_triggered()
 
         // upload image
         info = new QFileInfo(imagePath);
-        image = new Image(imagePath);
-        rightImage = new Image(imagePath);
 
-        leftScene->addPixmap(image->pixmapObject());
-        rightScene->addPixmap(rightImage->pixmapObject());
+        image = new QPixmap(imagePath);
+        rightImage = new QPixmap(imagePath);
+
+        leftScene->addPixmap(*image);
+        rightScene->addPixmap(*rightImage);
 
 
         // settings
@@ -424,12 +436,13 @@ void MainWindow::on_actionExit_triggered()
  *****************************************************************************/
 void MainWindow::on_actionGrayscale_triggered()
 {
-    QImage newImage = Tools::GreyScale(rightImage->pixmapObject().toImage());
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+    QImage newImage = Tools::GreyScale(rightImage->toImage());
+    rightImage->convertFromImage(newImage);
 
-    updateRightImage(tmpPixmap);
-
+    updateRightImage(*rightImage);
 }
+
+
 
 /******************************************************************************
  *                  Adjust the image size to fit the window
@@ -528,7 +541,7 @@ void MainWindow::on_actionHistogram_triggered()
     QDialog * hstgrmDialog = new QDialog(this);
     QScrollArea * scrollArea = new QScrollArea(hstgrmDialog);
     Histogram * hstgrm = new Histogram(scrollArea);
-    hstgrm->computeHstgrm(rightImage->pixmapObject().toImage());
+    hstgrm->computeHstgrm(rightImage->toImage());
 
     if (hstgrm == NULL)
         return;
@@ -559,28 +572,28 @@ void MainWindow::on_actionHistogram_triggered()
 void MainWindow::on_actionMovie_frame_triggered()
 {
     QImage frame = QImage(":/img/src/frame_3.png");
-    QImage newImage = Tools::DrawFrame(rightImage->pixmapObject().toImage(), frame);
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+    QImage newImage = Tools::DrawFrame(rightImage->toImage(), frame);
+    rightImage->convertFromImage(newImage);
 
-    updateRightImage(tmpPixmap);
+    updateRightImage(*rightImage);
 }
 
 void MainWindow::on_actionClassic_frame_triggered()
 {
     QImage frame = QImage(":/img/src/frame_1.png");
-    QImage newImage = Tools::DrawFrame(rightImage->pixmapObject().toImage(), frame);
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+    QImage newImage = Tools::DrawFrame(rightImage->toImage(), frame);
+    rightImage->convertFromImage(newImage);
 
-    updateRightImage(tmpPixmap);
+    updateRightImage(*rightImage);
 }
 
 void MainWindow::on_actionFlower_frame_triggered()
 {
     QImage frame = QImage(":/img/src/frame_2.png");
-    QImage newImage = Tools::DrawFrame(rightImage->pixmapObject().toImage(), frame);
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+    QImage newImage = Tools::DrawFrame(rightImage->toImage(), frame);
+    rightImage->convertFromImage(newImage);
 
-    updateRightImage(tmpPixmap);
+    updateRightImage(*rightImage);
 }
 
 /******************************************************************************
@@ -588,10 +601,10 @@ void MainWindow::on_actionFlower_frame_triggered()
  *****************************************************************************/
 void MainWindow::on_actionMetal_triggered()
 {
-    QImage newImage = Filters::Metal(rightImage->pixmapObject().toImage());
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+    QImage newImage = Filters::Metal(rightImage->toImage());
+    rightImage->convertFromImage(newImage);
 
-    updateRightImage(tmpPixmap);
+    updateRightImage(*rightImage);
 }
 
 /******************************************************************************
@@ -599,10 +612,10 @@ void MainWindow::on_actionMetal_triggered()
  *****************************************************************************/
 void MainWindow::on_actionCool_triggered()
 {
-    QImage newImage = Tools::Cool(30, rightImage->pixmapObject().toImage());
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+    QImage newImage = Tools::Cool(30, rightImage->toImage());
+    rightImage->convertFromImage(newImage);
 
-    updateRightImage(tmpPixmap);
+    updateRightImage(*rightImage);
 }
 
 /******************************************************************************
@@ -610,10 +623,10 @@ void MainWindow::on_actionCool_triggered()
  *****************************************************************************/
 void MainWindow::on_actionWarm_triggered()
 {
-    QImage newImage = Tools::Warm(30, rightImage->pixmapObject().toImage());
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+    QImage newImage = Tools::Warm(30, rightImage->toImage());
+    rightImage->convertFromImage(newImage);
 
-    updateRightImage(tmpPixmap);
+    updateRightImage(*rightImage);
 }
 
 
@@ -624,10 +637,10 @@ void MainWindow::on_actionWarm_triggered()
  *****************************************************************************/
 void MainWindow::on_actionSimple_triggered()
 {
-    QImage newImage = Tools::SimpleSmooth(rightImage->pixmapObject().toImage());
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+    QImage newImage = Tools::SimpleSmooth(rightImage->toImage());
+    rightImage->convertFromImage(newImage);
 
-    updateRightImage(tmpPixmap);
+    updateRightImage(*rightImage);
 }
 
 /******************************************************************************
@@ -651,9 +664,10 @@ void MainWindow::on_actionMeida_Filter_triggered()
     int value = QInputDialog::getInt(this, tr("Media Filter"), "Input a value for radius(1~30)",3,1,30,1,&ok);
     if (ok)
     {
-        QImage newImage = Tools::MeidaFilter(image->pixmapObject().toImage(), value);
-        QPixmap tmpPixmap = QPixmap::fromImage(newImage);
-        updateRightImage(tmpPixmap);
+        QImage newImage = Tools::MeidaFilter(rightImage->toImage(), value);
+        rightImage->convertFromImage(newImage);
+
+        updateRightImage(*rightImage);
     }
 }
 
@@ -688,10 +702,10 @@ void MainWindow::on_zoomAction_triggered()
  *****************************************************************************/
 void MainWindow::on_actionHorizontal_triggered()
 {
-    QImage newImage = Tools::Horizontal(rightImage->pixmapObject().toImage());
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+    QImage newImage = Tools::Horizontal(rightImage->toImage());
+    rightImage->convertFromImage(newImage);
 
-    updateRightImage(tmpPixmap);
+    updateRightImage(*rightImage);
 }
 
 /******************************************************************************
@@ -699,10 +713,10 @@ void MainWindow::on_actionHorizontal_triggered()
  *****************************************************************************/
 void MainWindow::on_actionVertical_triggered()
 {
-    QImage newImage = Tools::Vertical(rightImage->pixmapObject().toImage());
-    QPixmap tmpPixmap = QPixmap::fromImage(newImage);
+    QImage newImage = Tools::Vertical(rightImage->toImage());
+    rightImage->convertFromImage(newImage);
 
-    updateRightImage(tmpPixmap);
+    updateRightImage(*rightImage);
 }
 
 
@@ -792,7 +806,7 @@ void MainWindow::on_actionAdjust_brightness_triggered()
  *****************************************************************************/
 void MainWindow::on_actionNormal_triggered()
 {
-   updateRightImage(image->pixmapObject());
+   updateRightImage(*image);
 }
 
 /******************************************************************************
@@ -800,12 +814,12 @@ void MainWindow::on_actionNormal_triggered()
  *****************************************************************************/
 void MainWindow::on_actionZoom_In_triggered()
 {
-    int cur_width = rightImage->width();
-    int cur_height = rightImage->height();
+//    int cur_width = rightImage->width();
+//    int cur_height = rightImage->height();
 
-    QPixmap newPixmap = rightImage->pixmapObject().scaled(cur_width*1.2, cur_height*1.2);
+//    rightImage->scaled(cur_width*1.2, cur_height*1.2);
 
-    updateRightImage(newPixmap);
+//    updateRightImage(*rightImage);
 }
 
 ///******************************************************************************
@@ -813,13 +827,12 @@ void MainWindow::on_actionZoom_In_triggered()
 // *****************************************************************************/
 void MainWindow::on_actionZoom_Out_triggered()
 {
-    int cur_width = rightImage->width();
-    int cur_height = rightImage->height();
+//    int cur_width = rightImage->width();
+//    int cur_height = rightImage->height();
 
-    QPixmap newPixmap = rightImage->pixmapObject().scaled(cur_width/1.2, cur_height/1.2);
+//    rightImage->scaled(cur_width/1.2, cur_height/1.2);
 
-    rightImage->updatePixmap(newPixmap);
-    updateRightImage(newPixmap);
+//    updateRightImage(*rightImage);
 }
 
 /******************************************************************************
@@ -858,26 +871,6 @@ void MainWindow::on_actionEnglish_triggered()
 }
 
 /******************************************************************************
- *                Repaint the right Scene of the MainWindow
- *****************************************************************************/
-void MainWindow::repaintRightScene(QPixmap newPixmap)
-{
- //   rightScene->clear();
-//    ui->rightGraphicsView->setScene(rightScene);
-//    ui->rightGraphicsView->resetTransform();
-
-    if (rightScene) {
-        delete rightScene;
-        rightScene = new QGraphicsScene;
-        rightScene->setBackgroundBrush(QColor::fromRgb(224,224,224));
-        ui->rightGraphicsView->setScene(rightScene);
-        ui->rightGraphicsView->resetTransform();
-    }
-    rightScene->addPixmap(newPixmap);
-    qDebug() << "repaintRightScene"  << rightScene->items().count();
-}
-
-/******************************************************************************
  *                       Get the current user name
  *****************************************************************************/
 QString MainWindow::getUserName()
@@ -894,4 +887,14 @@ QString MainWindow::getUserPath()
 {
     QString userPath = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
     return userPath;
+}
+
+void MainWindow::on_actionT_triggered()
+{
+    QLabel* l = new QLabel;
+    if (rightImage) {
+        qDebug() << "hello";
+        l->setPixmap(*rightImage);
+        l->show();
+    }
 }

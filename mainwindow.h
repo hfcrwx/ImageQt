@@ -15,7 +15,6 @@
 #include <QDebug>
 #include <QStandardPaths>
 #include <QTranslator>
-#include "image.h"
 #include "graphicsview.h"
 #include "dialog_zoom.h"
 #include "dialog_brightness.h"
@@ -49,7 +48,7 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
-    void updateRightImage(const QPixmap &pixmap);
+    void updateRightImage(QPixmap &pixmap);
     void cleanImage();
 
     void setActionStatus(bool);
@@ -115,21 +114,18 @@ private slots:
     void on_actionChinese_triggered();
     void on_actionEnglish_triggered();
 
+    void on_actionT_triggered();
+
 private:
     Ui::MainWindow  *ui;
     QGraphicsScene  *leftScene;
     QGraphicsScene  *rightScene;
-    Image           *image;               // The original image
-    Image           *rightImage;          // The image to show in right Scene
-//    QPixmap image;
-//    QPixmap rightImage;
-
+    QPixmap* image;
+    QPixmap* rightImage;
     QLabel          *size;
     QLabel          *zoom;
-
     QFileInfo *info;
 
-    void repaintRightScene(QPixmap);
     QString getUserName();
     QString getUserPath();
 };
