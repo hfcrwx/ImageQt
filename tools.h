@@ -13,11 +13,11 @@
 
 namespace Tools {
 
-QImage GreyScale(QImage origin);
-QImage Warm(int delta, QImage origin);
-QImage Cool(int delta, QImage origin);
-QImage DrawFrame(QImage origin, QImage &frame);
-QImage Brightness(int delta, QImage origin);
+QImage GreyScale(const QImage& origin);
+QImage Warm(int delta, const QImage& origin);
+QImage Cool(int delta, const QImage& origin);
+QImage DrawFrame(const QImage& origin, const QImage& frame);
+QImage Brightness(int delta, const QImage& origin);
 QImage Horizontal(const QImage &origin);
 QImage Vertical(const QImage &origin);
 QImage LinearLevelTransformation(const QImage &origin, double a, double b);

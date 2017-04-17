@@ -12,13 +12,12 @@ MainWindow::MainWindow(QWidget *parent) :
     leftScene = new QGraphicsScene;
     rightScene = new QGraphicsScene;
 
-//    image = NULL;
-//    rightImage = NULL;
-
     size = new QLabel;
     zoom = new QLabel;
 
     info = NULL;
+    leftPixmapItem = NULL;
+    rightPixmapItem = NULL;
 
     leftScene->setBackgroundBrush(QColor::fromRgb(224,224,224));
     ui->leftGraphicsView->setScene(leftScene);
@@ -41,71 +40,26 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(on_actionNormal_triggered()));
 
     setActionStatus(false);
-    setWindowTitle("ImageQt");
     ui->actionEnglish->setEnabled(false);
+    setWindowTitle("ImageQt");
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
-
-    if (leftScene)
-    {
-        delete leftScene;
-        leftScene = NULL;
-    }
-//    if (image)
-//    {
-//        delete image;
-//        image = NULL;
-//    }
-    if (size)
-    {
-        delete size;
-        size = NULL;
-    }
-
-    if (zoom)
-    {
-        delete zoom;
-        zoom = NULL;
-    }
-
-    //add
-    if (rightScene)
-    {
-        delete leftScene;
-        leftScene = NULL;
-    }
-//    if (rightImage)
-//    {
-//        delete image;
-//        image = NULL;
-//    }
+    delete leftScene;
+    delete rightScene;
 }
 
 /******************************************************************************
  *                Update right image and repaint right scene
  *****************************************************************************/
-void MainWindow::updateRightImage(QPixmap &pixmap)
+void MainWindow::updateRightImage(const QPixmap &pixmap)
 {
-    //   rightScene->clear();
-   //    ui->rightGraphicsView->setScene(rightScene);
-   //    ui->rightGraphicsView->resetTransform();
-
-//       if (rightScene) {
-//           delete rightScene;
-//           rightScene = new QGraphicsScene;
-//           rightScene->setBackgroundBrush(QColor::fromRgb(224,224,224));
-//           ui->rightGraphicsView->setScene(rightScene);
-//           ui->rightGraphicsView->resetTransform();
-//       }
-//       rightScene->addPixmap(pixmap);
-
     rightPixmapItem->setPixmap(pixmap);
     rightScene->setSceneRect(QRectF(pixmap.rect()));
 
-       qDebug() << "repaintRightScene"  << rightScene->items().count();
+    qDebug() << "repaintRightScene"  << rightScene->items().count();
 }
 
 /******************************************************************************
@@ -120,33 +74,6 @@ void MainWindow::cleanImage()
     rightScene->clear();
     ui->rightGraphicsView->resetTransform();
 
-//    if (leftScene)
-//    {
-//        delete leftScene;
-//        leftScene = new QGraphicsScene;
-//        leftScene->setBackgroundBrush(QColor::fromRgb(224,224,224));
-//        ui->leftGraphicsView->setScene(leftScene);
-//    }
-//    if (rightScene)
-//    {
-//        delete rightScene;
-//        rightScene = new QGraphicsScene;
-//        rightScene->setBackgroundBrush(QColor::fromRgb(224,224,224));
-//        ui->rightGraphicsView->setScene(rightScene);
-//    }
-
-//    if (image)
-//    {
-//        delete image;
-//        image = NULL;
-//    }
-//    if (rightImage)
-//    {
-//        delete rightImage;
-//        rightImage = NULL;
-//    }
-
-    //show message?
     if (size)
     {
         delete size;
@@ -161,32 +88,28 @@ void MainWindow::cleanImage()
         ui->statusBar->addWidget(zoom);
     }
 
-    this->setWindowTitle(WINDOW_TITLE);
-//    ui->leftGraphicsView->resetTransform();
-//    ui->rightGraphicsView->resetTransform();
     setActionStatus(false);
+    this->setWindowTitle(WINDOW_TITLE);
 }
 
 void MainWindow::setActionStatus(bool status)
 {
-    // Blur
+    ui->hstgrmBtn->setEnabled(status);
+    ui->saveAsBtn->setEnabled(status);
+    ui->closeBtn->setEnabled(status);
+    ui->normalBtn->setEnabled(status);
+
     ui->actionSimple->setEnabled(status);
     ui->actionGauss->setEnabled(status);
     ui->actionMeida_Filter->setEnabled(status);
-    // Grey Transform
     ui->actionStretch_transformation->setEnabled(status);
     ui->actionExp_transfrom->setEnabled(status);
     ui->actionTwo_thresholds_transform->setEnabled(status);
     ui->actionPower_transformation->setEnabled(status);
     ui->actionLogarithm_grey_level_transformation->setEnabled(status);
-    ui->hstgrmBtn->setEnabled(status);
     ui->actionSave->setEnabled(status);
-    ui->saveAsBtn->setEnabled(status);
-    ui->closeBtn->setEnabled(status);
     ui->actionClose->setEnabled(status);
-    ui->normalBtn->setEnabled(status);
     ui->actionSave_As->setEnabled(status);
-
     ui->actionCool->setEnabled(status);
     ui->actionWarm->setEnabled(status);
     ui->actionFlower_frame->setEnabled(status);
@@ -204,8 +127,6 @@ void MainWindow::setActionStatus(bool status)
     ui->actionAdjust_brightness->setEnabled(status);
     ui->actionRight->setEnabled(status);
     ui->zoomAction->setEnabled(status);
-
-//    ui->menuFrame->setEnabled(status);
 }
 
 /******************************************************************************
@@ -250,8 +171,6 @@ void MainWindow::receiveGaussianFactor(int radius, double sigma)
  *****************************************************************************/
 void MainWindow::receiveZoomFactor(int factor)
 {
-    qDebug()<<"zoom factor:"<<factor;
-
     if (factor != 100)
     {
         QPixmap rightImage = rightPixmapItem->pixmap();
@@ -361,7 +280,7 @@ void MainWindow::on_actionOpen_triggered()
         }
 
         // delete previous image
-        cleanImage();
+        //cleanImage();
 
         // upload image
         info = new QFileInfo(imagePath);
@@ -669,9 +588,6 @@ void MainWindow::on_actionWarm_triggered()
 
     updateRightImage(rightImage);
 }
-
-
-
 
 /******************************************************************************
  *                             简单平滑

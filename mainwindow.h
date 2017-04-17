@@ -48,7 +48,7 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
-    void updateRightImage(QPixmap &pixmap);
+    void updateRightImage(const QPixmap &pixmap);
     void cleanImage();
 
     void setActionStatus(bool);

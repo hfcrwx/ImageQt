@@ -5,7 +5,7 @@
 /*****************************************************************************
  *                           Greyscale
  * **************************************************************************/
-QImage Tools::GreyScale(QImage origin)
+QImage Tools::GreyScale(const QImage &origin)
 {
     QImage *newImage = new QImage(origin.width(), origin.height(),
                                    QImage::Format_ARGB32);
@@ -26,7 +26,7 @@ QImage Tools::GreyScale(QImage origin)
 /*****************************************************************************
  *                           Adjust color temperature
  * **************************************************************************/
-QImage Tools::Warm(int delta, QImage origin)
+QImage Tools::Warm(int delta, const QImage &origin)
 {
     QImage *newImage = new QImage(origin.width(), origin.height(),
                                   QImage::Format_ARGB32);
@@ -55,7 +55,7 @@ QImage Tools::Warm(int delta, QImage origin)
     return *newImage;
 }
 
-QImage Tools::Cool(int delta, QImage origin)
+QImage Tools::Cool(int delta, const QImage& origin)
 {
     QImage *newImage = new QImage(origin.width(), origin.height(),
                                   QImage::Format_ARGB32);
@@ -88,11 +88,10 @@ QImage Tools::Cool(int delta, QImage origin)
 /*****************************************************************************
  *                          Adjust image brightness
  * **************************************************************************/
-QImage Tools::Brightness(int delta, QImage origin)
+QImage Tools::Brightness(int delta, const QImage& origin)
 {
     QImage *newImage = new QImage(origin.width(), origin.height(),
                                   QImage::Format_ARGB32);
-
     QColor oldColor;
     int r, g, b;
 
@@ -170,7 +169,7 @@ QImage Tools::Vertical(const QImage &origin)
 /*****************************************************************************
  *                            添加相框
  * **************************************************************************/
-QImage Tools::DrawFrame(QImage origin, QImage &frame)
+QImage Tools::DrawFrame(const QImage &origin, const QImage &frame)
 {
     QImage *newImage = new QImage(origin);
     QPainter painter;
